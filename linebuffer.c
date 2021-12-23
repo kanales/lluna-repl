@@ -2,16 +2,30 @@
 
 #include "definitions.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define BUFSIZE 4096
+
+#define HISTLEN 64
+static char *history[HISTLEN];
+static int last_hist = 0;
+static int hist_ptr = 0;
 
 static char line_buffer[BUFSIZE];
 static int _cursor = 0;
 
 void init() {
   memset(line_buffer, '\0', BUFSIZE);
+  memset(history, 0, HISTLEN);
   fputs("Press Ctrl+D to exit\n", stderr);
+}
+
+void reset() {
+  for (int i = 0; i < HISTLEN; i++) {
+    if (history[i] != NULL)
+      free(history[i]);
+  }
 }
 
 int cursor() { return _cursor; }
@@ -28,6 +42,33 @@ void cursor_right() {
     _cursor += 1;
     fputs(RIGHT(1), stderr);
   }
+}
+
+void cursor_up() {
+  int og = hist_ptr;
+  hist_ptr = (hist_ptr - 1) % HISTLEN;
+  const char *ptr = history[hist_ptr];
+  if (ptr != NULL)
+    memccpy(line_buffer, ptr, '\0', BUFSIZE);
+  else
+    hist_ptr = og;
+}
+
+void cursor_down() {
+  int og = hist_ptr;
+  hist_ptr = (hist_ptr + 1) % HISTLEN;
+  const char *ptr = history[hist_ptr];
+  if (ptr != NULL)
+    memccpy(line_buffer, ptr, '\0', BUFSIZE);
+  else
+    hist_ptr = og;
+}
+void history_add(const char *s) {
+  if (strlen(s) == 0)
+    return;
+  history[last_hist] = strdup(line_buffer);
+  hist_ptr = last_hist;
+  last_hist = (last_hist + 1) % HISTLEN;
 }
 
 void cursor_reset() { _cursor = 0; }

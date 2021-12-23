@@ -7,7 +7,6 @@
 #include <unistd.h>
 
 #include <lauxlib.h>
-#include <luajit.h>
 #include <lualib.h>
 
 #include "definitions.h"
@@ -28,6 +27,7 @@ void die(const char *msg) {
 
 ///
 struct termios og_termios;
+static lua_State *L;
 
 void disable_raw() {
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &og_termios) == -1) {
@@ -64,6 +64,7 @@ void display() {
   fputs(prompt, stderr);
   const char *line_buffer = buffer_get();
 
+  line_buffer = before_print(L, line_buffer);
   fprintf(stderr, "%s", line_buffer);
   fputs(LEFT(999), stderr);
   fprintf(stderr, "\x1b[%dC", cursor() + prompt_len);
@@ -71,8 +72,13 @@ void display() {
 
 void handle_newline() {
   display();
-  const char *line_buffer = buffer_get();
-  fprintf(stderr, "\r\n%s\r\n", line_buffer);
+  const char *line_buffer;
+  fputs("\r\n", stderr);
+  line_buffer = buffer_get();
+  history_add(line_buffer);
+  line_buffer = execute(L, line_buffer);
+  if (strlen(line_buffer) > 1)
+    fprintf(stderr, "%s\r\n", line_buffer);
   cursor_reset();
   buffer_clear();
 }
@@ -112,6 +118,14 @@ void process_keypress() {
       /* right */
       cursor_right();
     }
+
+    if (a == 91 && b == 66) {
+      cursor_down();
+    }
+
+    if (a == 91 && b == 65) {
+      cursor_up();
+    }
   }
 }
 
@@ -125,10 +139,13 @@ void process_keypress() {
  * than its input it might show as broken
  */
 int main(int argc, char *argv[]) {
-  lua_State *L = luaL_newstate();
-
+  if ((L = lua_open()) == NULL)
+    die("failed to allocate lua state");
   luaL_openlibs(L);
   handler_init(L);
+
+  luaL_dofile(L, "mod.lua");
+
   enable_raw();
   init();
   display();

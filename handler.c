@@ -43,13 +43,13 @@ int lua_complete(lua_State *L) {
 int handler_init(lua_State *L) {
   lua_newtable(L);
 
-  // lua_pushcfunction(L, lua_before_print);
-  // lua_setfield(L, -2, "before_print");
-  // lua_pushcfunction(L, lua_execute);
-  // lua_setfield(L, -2, "execute");
-  // lua_pushcfunction(L, lua_before_print);
-  // lua_setfield(L, -2, "before_print");
+  lua_pushcfunction(L, lua_before_print);
+  lua_setfield(L, -2, "before_print");
+  lua_pushcfunction(L, lua_execute);
+  lua_setfield(L, -2, "execute");
+  lua_pushcfunction(L, lua_before_print);
+  lua_setfield(L, -2, "before_print");
 
-  // lua_setglobal(L, "repl");
+  lua_setglobal(L, "repl");
   return 0;
 }
